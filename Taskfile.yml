@@ -1,0 +1,42 @@
+version: 3
+
+tasks:
+  pretty:
+    desc: Uses the Prettier CLI tool to format the codebase.
+    aliases:
+      - p
+      - format
+      - fmt
+    cmds:
+      - prettier --write .
+
+  build:
+    desc: Builds the project by transpiling the codebase into JavaScript.
+    aliases:
+      - bd
+    cmds:
+      - docker-compose build
+
+  clean:
+    desc: Deletes the build output directory any installed dependencies and any generated files.
+    aliases:
+      - c
+    cmds:
+      - rm -rf dist node_modules package-lock.json yarn.lock pnpm-lock.yaml
+
+  push:
+    desc: Push any git changes and tags to the remote repository.
+    aliases:
+      - gp
+    deps:
+      - build
+    cmds:
+      - git push
+      - git push --tags
+
+  restart:
+    cmds:
+      - docker-compose down
+      - task build
+      - docker-compose up -d
+      - docker-compose logs -f

@@ -1,0 +1,62 @@
+{
+  "name": "@4lch4/narb",
+  "displayName": "NARB",
+  "version": "0.0.0",
+  "description": "A Discord bot for scheduling reminders/notifications.",
+  "main": "./dist/index.js",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/4lch4/NARB",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc && tsc-alias",
+    "pretty": "prettier --write .",
+    "lint": "prettier -c .",
+    "test": "echo 'There are currently no tests available.'",
+    "scan": "snyk monitor && snyk code test"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "keywords": [
+    "NARB"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com/4lch4/NARB.git"
+  },
+  "author": {
+    "name": "4lch4",
+    "email": "hey@4lch4.email",
+    "url": "https://4lch4.com"
+  },
+  "bugs": {
+    "email": "bugs@4lch4.email",
+    "url": "https://github.com/4lch4/NARB/issues"
+  },
+  "dependencies": {
+    "@4lch4/logger": "^1.11.0",
+    "@discordx/importer": "^1.2.2",
+    "@discordx/koa": "^1.1.2",
+    "@discordx/pagination": "^3.4.1",
+    "@hokify/agenda": "^6.3.0",
+    "@koa/router": "^12.0.0",
+    "discord.js": "^14.11.0",
+    "discordx": "^11.7.6",
+    "koa": "^2.14.2",
+    "saslprep": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.13.6",
+    "@types/koa__router": "^12.0.0",
+    "@types/node": "^20.3.1",
+    "nodemon": "^2.0.22",
+    "prettier": "^2.8.8",
+    "ts-node": "^10.9.1",
+    "tsc-alias": "^1.8.7",
+    "typescript": "5.1.3"
+  }
+}
