@@ -6,6 +6,12 @@ import { Client } from 'discordx'
 import { Agenda } from '@hokify/agenda'
 import { logger } from '@4lch4/logger'
 import { AgendaService } from './agenda/index.js'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc.js'
+import timezone from 'dayjs/plugin/timezone.js'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 export const bot = new Client({
   intents: [
@@ -29,6 +35,13 @@ bot.once('ready', async () => {
 
   // Synchronize applications commands with Discord
   await bot.initApplicationCommands()
+
+  const homeChannel = await bot.channels.fetch('1060314191749206068')
+
+  if (homeChannel?.isTextBased()) {
+    const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
+    homeChannel.send(`[${timestamp}]: NARB has come online...`)
+  }
 
   // To clear all guild commands, uncomment this line,
   // This is useful when moving from guild commands to global commands
@@ -80,18 +93,18 @@ async function run() {
 
   // ************* rest api section: start **********
 
-  // api: prepare server
-  const server = new Koa()
+  // // api: prepare server
+  // const server = new Koa()
 
-  // api: need to build the api server first
-  await server.build()
+  // // api: need to build the api server first
+  // await server.build()
 
-  // api: let's start the server now
-  const port = process.env.PORT ?? 3000
-  server.listen(port, () => {
-    console.log(`discord api server started on ${port}`)
-    console.log(`visit localhost:${port}/guilds`)
-  })
+  // // api: let's start the server now
+  // const port = process.env.PORT ?? 3000
+  // server.listen(port, () => {
+  //   console.log(`discord api server started on ${port}`)
+  //   console.log(`visit localhost:${port}/guilds`)
+  // })
 
   // ************* rest api section: end **********
 }
