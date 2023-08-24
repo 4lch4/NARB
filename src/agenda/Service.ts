@@ -8,7 +8,7 @@ export class AgendaService {
   public client: Agenda
 
   public constructor({ address, collection }: AgendaConfig) {
-    this.client = new Agenda({ db: { address, collection } })
+    this.client = new Agenda({ db: { address, collection }, defaultConcurrency: 5 })
   }
 
   public async loadJobs(bot: Client): Promise<void> {
