@@ -36,7 +36,7 @@ tasks:
 
   restart:
     cmds:
-      - docker-compose down
       - task build
+      - docker-compose down
       - docker-compose up -d
       - docker-compose logs -f
