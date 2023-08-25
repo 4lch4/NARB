@@ -18,6 +18,7 @@
       "@events/*": ["djs/events/*"],
       "@commands/*": ["djs/commands/*"],
       "@agenda/*": ["agenda/*"],
+      "@lib/*": ["lib/*"],
     },
 
     "strict": true,

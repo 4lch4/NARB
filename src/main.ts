@@ -36,22 +36,31 @@ bot.once('ready', async () => {
   // Synchronize applications commands with Discord
   await bot.initApplicationCommands()
 
-  const homeChannel = await bot.channels.fetch('1060314191749206068')
+  const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
 
-  if (homeChannel?.isTextBased()) {
-    const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
+  await adminTools.sendImportantMessage(`Server has come **ONLINE** @ \`${timestamp}\`...`)
+
+  logger.success(`NARB has come online @ ${timestamp}...`)
+})
+
+bot.on('debug', (message: string) => logger.debug(`[ClientEvent:debug]: ${message}`))
+
+bot.on('warn', (message: string) => logger.warn(`[ClientEvent:warn]: ${message}`))
+
+bot.on('error', (error: Error) => {
+  logger.error(`[ClientEvent:error]: ${JSON.stringify(error, null, 2)}`)
+})
+
+process.on('SIGTERM', async () => {
+  const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
     homeChannel.send(`[${timestamp}]: NARB has come online...`)
   }
 
-  // To clear all guild commands, uncomment this line,
-  // This is useful when moving from guild commands to global commands
-  // It must only be executed once
-  //
-  //  await bot.clearApplicationCommands(
-  //    ...bot.guilds.cache.map((g) => g.id)
-  //  );
+  await adminTools.sendImportantMessage(`Server is going **OFFLINE** @ \`${timestamp}\`...`)
 
-  console.log('Bot started')
+  logger.info('SIGTERM signal received.')
+
+  process.exit(0)
 })
 
 bot.on('interactionCreate', (interaction: Interaction) => {
