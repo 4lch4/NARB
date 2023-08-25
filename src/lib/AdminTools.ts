@@ -3,9 +3,6 @@ import { Client } from 'discordx'
 const HOMEPAGE_CHANNEL_ID = '1060314191749206068'
 
 export class BotTools {
-  // private agenda: AgendaService
-  // private bot: Client
-
   public constructor(private bot: Client) {}
 
   public async sendImportantMessage(message: string, mention: boolean = false) {

@@ -22,12 +22,13 @@ import {
 } from 'discordx'
 import { ObjectId } from 'mongodb'
 import { nanoid } from 'nanoid'
+import { RemindersOptions } from '@constants/index.js'
 
 const agenda = new AgendaService()
 
 @Discord()
 @SlashGroup({ name: 'reminders', description: 'Manage your reminders.' })
-export class NewReminder {
+export class Reminders {
   @Slash({
     description: 'Schedule a new reminder to be sent to you in the future.',
     name: 'schedule',
@@ -36,11 +37,22 @@ export class NewReminder {
   async schedule(
     @SlashOption({
       description:
-        'When to be sent your reminder, if `reoccurring` is true, this is treated as an interval.',
+        'When to be sent your reminder, if `recurring` is true, this is treated as an interval.',
       name: 'when',
       required: true,
       type: ApplicationCommandOptionType.String,
-      transformer: (value: string) => DateTool.convertToHumanInterval(value),
+      autocomplete: async interaction => {
+        const input = `${interaction.options.get('when')?.value}`
+
+        if (input.length > 1) {
+          const converted = DateTool.convertToHumanInterval(input)
+
+          logger.debug(`Input: ${input}, Converted: ${converted}`)
+
+          interaction.respond([{ name: converted, value: converted }])
+        } else interaction.respond([{ name: 'Start Typing...', value: 'Start Typing...' }])
+      },
+      transformer: value => DateTool.convertToHumanInterval(value),
     })
     when: string,
 
