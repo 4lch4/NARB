@@ -45,11 +45,15 @@ export class Reminders extends BaseCommand {
         const input = `${interaction.options.get('when')?.value}`
 
         if (input.length > 1) {
-          const converted = DateTool.convertToHumanInterval(input)
+          const humanInterval = DateTool.convertToHumanInterval(input)
+          const timestamp = HumanIntervalToMS(humanInterval)
 
-          logger.debug(`Input: ${input}, Converted: ${converted}`)
-
-          interaction.respond([{ name: converted, value: converted }])
+          // timestamp is not a number, so we can't autocomplete
+          if (Number.isNaN(timestamp)) {
+            interaction.respond([
+              { name: 'Invalid time format...', value: 'Invalid time format...' },
+            ])
+          } else interaction.respond([{ name: humanInterval, value: humanInterval }])
         } else interaction.respond([{ name: 'Start Typing...', value: 'Start Typing...' }])
       },
       transformer: value => DateTool.convertToHumanInterval(value),
@@ -65,8 +69,8 @@ export class Reminders extends BaseCommand {
     message: string,
 
     @SlashOption({
-      description: 'Whether or not you would like your reminder to be reoccurring.',
-      name: 'reoccurring',
+      description: 'Whether or not you would like your reminder to be recurring.',
+      name: 'recurring',
       required: false,
       type: ApplicationCommandOptionType.Boolean,
     })
@@ -96,9 +100,23 @@ export class Reminders extends BaseCommand {
       userId: interaction.user.id,
     }
 
-    await agenda.defineReminder(jobName, interaction)
+    const responses = await this.agenda
+      .defineReminder(jobName, interaction)
+      .scheduleReminder(jobName, jobData)
+      .start()
+      .runCalls()
 
-    await agenda.scheduleReminder(jobName, jobData)
+    // logger.info(`[Reminders#schedule]: ${JSON.stringify(callRes, null, 2)}`)
+    // console.log('[Reminders#schedule]: callRes', responses)
+    const failures = responses
+      .filter(res => res.status !== 'fulfilled')
+    
+    if (failures.length > 0) {
+      logger.error(`[Reminders#schedule]: Failed Promises: ${JSON.stringify(failures, null, 2)}`)
+    }
+    
+
+    // await this.agenda.scheduleReminder(jobName, jobData)
 
     await interaction.editReply(`Message scheduled for \`${when}\`.`)
   }
@@ -111,7 +129,7 @@ export class Reminders extends BaseCommand {
   async list(interaction: CommandInteraction): Promise<void> {
     // await interaction.deferReply({ ephemeral: true })
 
-    const reminders = await agenda.getUserReminders(interaction.user.id)
+    const reminders = await this.agenda.getUserActiveReminders(interaction.user.id)
     const pages: PaginationItem[] = []
 
     for (let x = 0; x < reminders.length; x++) {
@@ -137,7 +155,7 @@ export class Reminders extends BaseCommand {
   }
 
   private async deleteAutocomplete(interaction: AutocompleteInteraction) {
-    const remindersData = await agenda.getUserReminders(interaction.user.id)
+    const remindersData = await this.agenda.getUserActiveReminders(interaction.user.id)
     const remindersMap: ApplicationCommandOptionChoiceData<string | number>[] = []
 
     for (let x = 0; x < remindersData.length; x++) {
@@ -181,7 +199,7 @@ export class Reminders extends BaseCommand {
 
       const objectId = new ObjectId(reminder)
 
-      const reminderJob = await agenda.getReminders({ _id: objectId }, undefined, 1)
+      const reminderJob = await this.agenda.getReminders({ _id: objectId }, undefined, 1)
 
       await reminderJob[0].remove()
 
