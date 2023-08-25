@@ -23,12 +23,12 @@ import {
 import { ObjectId } from 'mongodb'
 import { nanoid } from 'nanoid'
 import { RemindersOptions } from '@constants/index.js'
-
-const agenda = new AgendaService()
+import HumanIntervalToMS from 'human-interval'
+import { BaseCommand } from '@lib/index.js'
 
 @Discord()
 @SlashGroup({ name: 'reminders', description: 'Manage your reminders.' })
-export class Reminders {
+export class Reminders extends BaseCommand {
   @Slash({
     description: 'Schedule a new reminder to be sent to you in the future.',
     name: 'schedule',
