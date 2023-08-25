@@ -4,13 +4,22 @@ import { AgendaService } from '@agenda/index.js'
 import { Pagination, PaginationItem, PaginationType } from '@discordx/pagination'
 import { Job } from '@hokify/agenda'
 import { ReminderJobData } from '@interfaces/index.js'
+import { DateTool } from '@lib/DateTool.js'
 import type {
   ApplicationCommandOptionChoiceData,
   AutocompleteInteraction,
   CommandInteraction,
 } from 'discord.js'
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
-import { Discord, Slash, SlashGroup, SlashOption } from 'discordx'
+import {
+  Discord,
+  NotEmpty,
+  Slash,
+  SlashGroup,
+  SlashGroupOptions,
+  SlashOption,
+  VerifyName,
+} from 'discordx'
 import { ObjectId } from 'mongodb'
 import { nanoid } from 'nanoid'
 
@@ -20,16 +29,18 @@ const agenda = new AgendaService()
 @SlashGroup({ name: 'reminders', description: 'Manage your reminders.' })
 export class NewReminder {
   @Slash({
-    description: 'Create a new reminder.',
-    name: 'create',
+    description: 'Schedule a new reminder to be sent to you in the future.',
+    name: 'schedule',
   })
   @SlashGroup('reminders')
-  async create(
+  async schedule(
     @SlashOption({
-      description: 'When to be sent your reminder.',
+      description:
+        'When to be sent your reminder, if `reoccurring` is true, this is treated as an interval.',
       name: 'when',
       required: true,
       type: ApplicationCommandOptionType.String,
+      transformer: (value: string) => DateTool.convertToHumanInterval(value),
     })
     when: string,
 
@@ -42,12 +53,12 @@ export class NewReminder {
     message: string,
 
     @SlashOption({
-      description: 'How often to be sent your reminder.',
-      name: 'interval',
+      description: 'Whether or not you would like your reminder to be reoccurring.',
+      name: 'reoccurring',
       required: false,
-      type: ApplicationCommandOptionType.String,
+      type: ApplicationCommandOptionType.Boolean,
     })
-    interval: string | undefined,
+    recurring: boolean | undefined,
 
     @SlashOption({
       description: 'Whether or not you would like to be mentioned in your reminder.',
@@ -61,48 +72,23 @@ export class NewReminder {
   ): Promise<void> {
     await interaction.deferReply({ ephemeral: true })
 
-    logger.info(`[NewReminder#create]: When: ${when}`)
-    logger.info(`[NewReminder#create]: What: ${message}`)
-    logger.info(`[NewReminder#create]: Interval: ${interval}`)
-    logger.info(`[NewReminder#create]: JobNames.BasicReminder = ${JobNames.BasicReminder}`)
-
     const jobName = `${JobNames.BasicReminder}-${nanoid(10)}`
 
-    agenda.client.define(jobName, async (job: Job<ReminderJobData>) => {
-      const { channelId, message, userId, when, mention } = job.attrs.data
-
-      logger.debug(`[ReminderJob#define:run]: Within the ${JobNames.BasicReminder} job...`)
-      logger.debug(`[ReminderJob#define:run]: Channel ID: ${channelId}`)
-      logger.debug(`[ReminderJob#define:run]: Message: ${message}`)
-      logger.debug(`[ReminderJob#define:run]: User ID: ${userId}`)
-      logger.debug(`[ReminderJob#define:run]: When: ${when}`)
-
-      const channel = await interaction.client.channels.fetch(channelId)
-
-      if (channel?.isTextBased()) {
-        if (mention) return channel.send(`<@${userId}>: ${message}`)
-        else return channel.send(message)
-      }
-    })
-
-    // agenda.client.
-
-    await agenda.client.every(
+    const jobData: ReminderJobData = {
       when,
-      jobName,
-      {
-        when,
-        message,
-        mention: mention || false,
-        channelId: interaction.channelId,
-        userId: interaction.user.id,
-      },
-      { skipImmediate: true }
-    )
+      message,
+      mention: mention || false,
+      recurring: recurring || false,
+      timezone: 'America/Chicago',
+      channelId: interaction.channelId,
+      userId: interaction.user.id,
+    }
 
-    await agenda.start()
+    await agenda.defineReminder(jobName, interaction)
 
-    await interaction.editReply(`When: ${when}, What: ${message}`)
+    await agenda.scheduleReminder(jobName, jobData)
+
+    await interaction.editReply(`Message scheduled for \`${when}\`.`)
   }
 
   @Slash({
