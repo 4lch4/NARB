@@ -4,6 +4,5 @@ services:
   app:
     build: .
     command: node dist/main.js
-    environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - MONGODB_URI=${MONGODB_URI}
+    env_file:
+      - .env

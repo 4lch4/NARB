@@ -1,5 +1,9 @@
 version: 3
 
+env:
+  DOPPLER_PROJECT: narb
+  DOPPLER_CONFIG: nonprod
+
 tasks:
   pretty:
     desc: Uses the Prettier CLI tool to format the codebase.
@@ -34,9 +38,19 @@ tasks:
       - git push
       - git push --tags
 
+  secrets:
+    desc: Syncs the secrets from Doppler to the local environment.
+    aliases:
+      - s
+    cmds:
+      - doppler secrets download --no-file --format env -p {{ .DOPPLER_PROJECT }} -c {{ .DOPPLER_CONFIG }} > .env
+
   restart:
+    aliases: [r]
+    desc: Rebuilds and restarts the project.
     cmds:
       - task build
       - docker-compose down
+      - task secrets
       - docker-compose up -d
       - docker-compose logs -f
