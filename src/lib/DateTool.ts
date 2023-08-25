@@ -1,45 +1,5 @@
 import humanInterval from 'human-interval'
 
-const inputs = [
-  '1 seconds',
-  '1 second',
-  '1 secs',
-  '1 sec',
-  '1 s',
-
-  '1 mins',
-  '1 min',
-  '1 m',
-
-  '1 hours',
-  '1 hour',
-  '1 hrs',
-  '1 hr',
-  '1 h',
-
-  '1 days',
-  '1 day',
-  '1 d',
-
-  '1 weeks',
-  '1 week',
-  '1 wk',
-  '1 w',
-
-  '1 months',
-  '1 month',
-  '1 mon',
-  '1 mo',
-  '1 M',
-
-  '1 years',
-  '1 year',
-  '1 yrs',
-  '1 yr',
-  '1 y',
-
-  '1 hr and 1 min 2 s',
-]
 
 enum Unit {
   Seconds = 'seconds',
