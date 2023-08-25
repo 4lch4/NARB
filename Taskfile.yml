@@ -19,14 +19,15 @@ tasks:
     aliases:
       - bd
     cmds:
-      - docker-compose build
+      - docker build -t 4lch4/narb:latest .
 
   clean:
     desc: Deletes the build output directory any installed dependencies and any generated files.
     aliases:
       - c
     cmds:
-      - rm -rf dist node_modules package-lock.json yarn.lock pnpm-lock.yaml
+      - docker stop narb
+      - docker rm narb
 
   push:
     desc: Push any git changes and tags to the remote repository.
@@ -43,14 +44,20 @@ tasks:
     aliases:
       - s
     cmds:
-      - doppler secrets download --no-file --format env -p {{ .DOPPLER_PROJECT }} -c {{ .DOPPLER_CONFIG }} > .env
+      - "[ -f .env ] && doppler secrets download --no-file --format docker -p {{ .DOPPLER_PROJECT }} -c {{ .DOPPLER_CONFIG }} > .env"
+
+  start:
+    desc: Starts the project.
+    aliases:
+      - st
+    cmds:
+      - docker run -d --name narb --env-file=".env" 4lch4/narb:latest
 
   restart:
     aliases: [r]
     desc: Rebuilds and restarts the project.
     cmds:
       - task build
-      - docker-compose down
       - task secrets
-      - docker-compose up -d
-      - docker-compose logs -f
+      - task clean
+      - task start

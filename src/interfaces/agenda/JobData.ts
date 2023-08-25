@@ -12,5 +12,8 @@ export type ReminderJobData = {
   userId: string
 
   /** Whether or not to mention the user in the reminder. */
-  mention: boolean
+  mention?: boolean
+
+  /** Whether or not a reminder should be reoccurring. */
+  reoccuring?: boolean
 }
