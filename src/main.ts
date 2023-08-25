@@ -66,6 +66,22 @@ process.on('SIGTERM', async () => {
   process.exit(0)
 })
 
+process.on('uncaughtException', async (error: Error) => {
+  logger.error(`[process#uncaughtException]: ${JSON.stringify(error, null, 2)}`)
+
+  await adminTools.sendImportantMessage(
+    `Server has encountered an \`uncaughtException\`:\n\n\`\`\`${error}\`\`\``
+  )
+})
+
+process.on('unhandledRejection', async (reason: Error | any, promise: Promise<any>) => {
+  logger.error(`[process#unhandledRejection]: ${JSON.stringify(reason, null, 2)}`)
+
+  await adminTools.sendImportantMessage(
+    `Server has encountered an \`unhandledRejection\`:\n\n\`\`\`${reason}\`\`\``
+  )
+})
+
 bot.on('interactionCreate', (interaction: Interaction) => {
   bot.executeInteraction(interaction)
 })
