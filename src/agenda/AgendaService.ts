@@ -1,23 +1,26 @@
 import { logger } from '@4lch4/logger'
+import { getActiveRemindersQuery } from '@constants/index.js'
 import { Agenda, Job } from '@hokify/agenda'
 import { ReminderInput, ReminderJobData } from '@interfaces/index.js'
 import { Config } from '@lib/index.js'
 import { CommandInteraction } from 'discord.js'
-import { Client } from 'discordx'
 
 export class AgendaService {
   public client: Agenda
+  private calls: Array<Promise<any>> = []
 
   public constructor() {
     this.client = new Agenda(Config.getAgendaConfig())
   }
 
   /** Starts the {@link Agenda} job processor(s). */
-  public async start(): Promise<void> {
-    return this.client.start()
+  public start(): AgendaService {
+    this.calls.push(this.client.start())
+
+    return this
   }
 
-  public async defineReminder(name: string, interaction: CommandInteraction) {
+  public defineReminder(name: string, interaction: CommandInteraction): AgendaService {
     this.client.define(name, async (job: Job<ReminderJobData>) => {
       let { channelId, message, userId, when, mention } = job.attrs.data
 
@@ -35,12 +38,14 @@ export class AgendaService {
         return channel.send(message)
       }
     })
+
+    return this
   }
 
-  public async scheduleReminder(
+  public scheduleReminder(
     name: string,
     { channelId, message, userId, when, mention, recurring, timezone }: ReminderInput
-  ): Promise<void> {
+  ): AgendaService {
     const JobData: ReminderJobData = {
       when,
       userId,
@@ -53,12 +58,15 @@ export class AgendaService {
     }
 
     if (JobData.recurring) {
-      await this.client.every(when, name, JobData, { skipImmediate: true })
-    } else {
-      await this.client.schedule(when, name, JobData)
-    }
+      this.calls.push(this.client.every(when, name, JobData, { skipImmediate: true }))
+    } else this.calls.push(this.client.schedule(when, name, JobData))
 
-    return this.client.start()
+    return this
+  }
+
+  /** Execute any accumulated Promises, and any provided calls, and then return the results. */
+  public async runCalls(...calls: Promise<any>[]) {
+    return Promise.allSettled([...this.calls, ...calls])
   }
 
   /**
@@ -106,5 +114,11 @@ export class AgendaService {
     const remindersData = await this.client.jobs({ 'data.userId': userId })
 
     return remindersData as Job<ReminderJobData>[]
+  }
+
+  public async getUserActiveReminders(userId: string): Promise<Job<ReminderJobData>[]> {
+    const reminders = await this.client.jobs(getActiveRemindersQuery(userId))
+
+    return reminders as Job<ReminderJobData>[]
   }
 }
