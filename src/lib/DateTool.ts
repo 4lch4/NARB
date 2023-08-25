@@ -81,16 +81,22 @@ export class DateTool {
    * @returns The human interval string.
    */
   public static convertToHumanInterval(input: string) {
-    // const res: string[] = []
+    const res: string[] = []
 
-    // for (const key of input.split(' ')) res.push(UnitConversion[key] || key)
+    for (const key of input.split(' ')) {
+      let added = false
+      for (const unitKey of Object.keys(UnitConversion)) {
+        if (key === unitKey && UnitConversion[unitKey]) {
+          res.push(UnitConversion[unitKey])
 
-    // return res.join(' ')
+          added = true
+        }
+      }
 
-    return input
-      .split(' ')
-      .map(x => UnitConversion[x] || x)
-      .join(' ')
+      // If the value wasn't converted and added already, add it as is.
+      if (!added) res.push(key)
+    }
+
+    return res.join(' ')
   }
 }
-
