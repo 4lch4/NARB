@@ -1,30 +1,19 @@
 import { logger } from '@4lch4/logger'
 import { JobNames } from '@agenda/Constants.js'
-import { AgendaService } from '@agenda/index.js'
 import { Pagination, PaginationItem, PaginationType } from '@discordx/pagination'
-import { Job } from '@hokify/agenda'
 import { ReminderJobData } from '@interfaces/index.js'
 import { DateTool } from '@lib/DateTool.js'
+import { BaseCommand } from '@lib/index.js'
 import type {
   ApplicationCommandOptionChoiceData,
   AutocompleteInteraction,
   CommandInteraction,
 } from 'discord.js'
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
-import {
-  Discord,
-  NotEmpty,
-  Slash,
-  SlashGroup,
-  SlashGroupOptions,
-  SlashOption,
-  VerifyName,
-} from 'discordx'
+import { Discord, Slash, SlashGroup, SlashOption } from 'discordx'
+import HumanIntervalToMS from 'human-interval'
 import { ObjectId } from 'mongodb'
 import { nanoid } from 'nanoid'
-import { RemindersOptions } from '@constants/index.js'
-import HumanIntervalToMS from 'human-interval'
-import { BaseCommand } from '@lib/index.js'
 
 @Discord()
 @SlashGroup({ name: 'reminders', description: 'Manage your reminders.' })
@@ -106,17 +95,11 @@ export class Reminders extends BaseCommand {
       .start()
       .runCalls()
 
-    // logger.info(`[Reminders#schedule]: ${JSON.stringify(callRes, null, 2)}`)
-    // console.log('[Reminders#schedule]: callRes', responses)
-    const failures = responses
-      .filter(res => res.status !== 'fulfilled')
-    
+    const failures = responses.filter(res => res.status !== 'fulfilled')
+
     if (failures.length > 0) {
       logger.error(`[Reminders#schedule]: Failed Promises: ${JSON.stringify(failures, null, 2)}`)
     }
-    
-
-    // await this.agenda.scheduleReminder(jobName, jobData)
 
     await interaction.editReply(`Message scheduled for \`${when}\`.`)
   }
@@ -127,8 +110,6 @@ export class Reminders extends BaseCommand {
   })
   @SlashGroup('reminders')
   async list(interaction: CommandInteraction): Promise<void> {
-    // await interaction.deferReply({ ephemeral: true })
-
     const reminders = await this.agenda.getUserActiveReminders(interaction.user.id)
     const pages: PaginationItem[] = []
 
@@ -139,7 +120,6 @@ export class Reminders extends BaseCommand {
           `**Message**: ${reminders[x].attrs.data.message}\n\n**When**: ${reminders[x].attrs.data.when}`
         )
         .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
-      // .addFields({ name: 'When', value: reminders[x].attrs.data.when, inline: true })
 
       pages.push({ embeds: [embed] })
     }
@@ -193,8 +173,6 @@ export class Reminders extends BaseCommand {
   ): Promise<void> {
     if (interaction.isAutocomplete()) this.deleteAutocomplete(interaction)
     else {
-      // await interaction.deferReply({ ephemeral: true })
-
       logger.info(`[NewReminder#delete]: Reminder ID: ${reminder}`)
 
       const objectId = new ObjectId(reminder)
