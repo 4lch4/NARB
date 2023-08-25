@@ -9,9 +9,13 @@ import { AgendaService } from './agenda/index.js'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
 import timezone from 'dayjs/plugin/timezone.js'
+import { BotTools } from './lib/AdminTools.js'
+import { Config } from '@lib/index.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
+
+const agenda = new Agenda(Config.getAgendaConfig())
 
 export const bot = new Client({
   intents: [
@@ -28,6 +32,8 @@ export const bot = new Client({
   // Configuration for @SimpleCommand
   simpleCommand: { prefix: '!' },
 })
+
+const adminTools = new BotTools(bot)
 
 bot.once('ready', async () => {
   // Make sure all guilds are cached
@@ -53,8 +59,6 @@ bot.on('error', (error: Error) => {
 
 process.on('SIGTERM', async () => {
   const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
-    homeChannel.send(`[${timestamp}]: NARB has come online...`)
-  }
 
   await adminTools.sendImportantMessage(`Server is going **OFFLINE** @ \`${timestamp}\`...`)
 
@@ -84,19 +88,10 @@ async function run() {
     throw Error('Could not find the required DISCORD_BOT_TOKEN variable in your environment.')
   }
 
-  if (!process.env.MONGODB_URI) {
-    throw Error('Could not find the required MONGODB_URI variable in your environment.')
-  }
-
   // Log in with your bot token
   await bot.login(process.env.DISCORD_BOT_TOKEN)
 
-  const agendaService = new AgendaService({
-    address: process.env.MONGODB_URI,
-    collection: 'agendaJobs',
-  })
-
-  await agendaService.loadJobs(bot)
+  const agendaService = new AgendaService()
 
   await agendaService.start()
 

@@ -1,5 +1,12 @@
-import { Pagination, PaginationItem } from '@discordx/pagination'
-import type { CommandInteraction, Channel, ButtonInteraction } from 'discord.js'
+import { Pagination, PaginationItem, PaginationType } from '@discordx/pagination'
+import type {
+  CommandInteraction,
+  Channel,
+  ButtonInteraction,
+  ApplicationCommandOptionChoiceData,
+  AutocompleteInteraction,
+} from 'discord.js'
+import { nanoid } from 'nanoid'
 import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
@@ -9,6 +16,7 @@ import {
   MessageActionRowComponentBuilder,
 } from 'discord.js'
 import {
+  ApplicationCommandOptions,
   ButtonComponent,
   Discord,
   MetadataStorage,
@@ -24,14 +32,14 @@ import { ObjectId } from 'mongodb'
 import { ReminderJobData } from '@interfaces/index.js'
 import { Job } from '@hokify/agenda'
 
-const agenda = new AgendaService({ address: process.env.MONGODB_URI!, collection: 'agendaJobs' })
+const agenda = new AgendaService()
 
 @Discord()
 @SlashGroup({ name: 'reminders', description: 'Manage your reminders.' })
 export class NewReminder {
   @Slash({
-    description: 'Test agenda.',
-    name: 'new',
+    description: 'Create a new reminder.',
+    name: 'create',
   })
   @SlashGroup('reminders')
   async create(
@@ -52,22 +60,34 @@ export class NewReminder {
     message: string,
 
     @SlashOption({
-      description: '(**Premium Feature**) How often to be sent your reminder.',
+      description: 'How often to be sent your reminder.',
       name: 'interval',
       required: false,
       type: ApplicationCommandOptionType.String,
     })
     interval: string | undefined,
 
+    @SlashOption({
+      description: 'Whether or not you would like to be mentioned in your reminder.',
+      name: 'mention',
+      required: false,
+      type: ApplicationCommandOptionType.Boolean,
+    })
+    mention: boolean | undefined,
+
     interaction: CommandInteraction
   ): Promise<void> {
+    await interaction.deferReply({ ephemeral: true })
+
     logger.info(`[NewReminder#create]: When: ${when}`)
     logger.info(`[NewReminder#create]: What: ${message}`)
     logger.info(`[NewReminder#create]: Interval: ${interval}`)
     logger.info(`[NewReminder#create]: JobNames.BasicReminder = ${JobNames.BasicReminder}`)
 
-    agenda.client.define(`${JobNames.BasicReminder}-${interaction.id}`, async (job: Job<ReminderJobData>) => {
-      const { channelId, message, userId, when } = job.attrs.data
+    const jobName = `${JobNames.BasicReminder}-${nanoid(10)}`
+
+    agenda.client.define(jobName, async (job: Job<ReminderJobData>) => {
+      const { channelId, message, userId, when, mention } = job.attrs.data
 
       logger.debug(`[ReminderJob#define:run]: Within the ${JobNames.BasicReminder} job...`)
       logger.debug(`[ReminderJob#define:run]: Channel ID: ${channelId}`)
@@ -78,41 +98,29 @@ export class NewReminder {
       const channel = await interaction.client.channels.fetch(channelId)
 
       if (channel?.isTextBased()) {
-        if (channel.isDMBased()) return channel.send(message)
-        else return channel.send(`<@${userId}>: ${message}`)
+        if (mention) return channel.send(`<@${userId}>: ${message}`)
+        else return channel.send(message)
       }
     })
 
-    await agenda.client.every(when, `${JobNames.BasicReminder}-${interaction.id}`, {
+    // agenda.client.
+
+    await agenda.client.every(
       when,
-      message,
-      channelId: interaction.channelId,
-      userId: interaction.user.id,
-    })
+      jobName,
+      {
+        when,
+        message,
+        mention: mention || false,
+        channelId: interaction.channelId,
+        userId: interaction.user.id,
+      },
+      { skipImmediate: true }
+    )
 
-    await interaction.reply(`When: ${when}, What: ${message}`)
-    // interaction.reply(`When: ${when}, What: ${what}`)
-  }
+    await agenda.start()
 
-  @ButtonComponent({ id: 'deleteBtn' })
-  async deleteBtn(interaction: ButtonInteraction): Promise<void> {
-    logger.info(`[NewReminder#deleteBtn]: Interaction...`)
-
-    const jobId = interaction.message.embeds[0].fields.find(field => field.name === 'JobID')?.value
-
-    if (jobId) {
-      logger.success(`[NewReminder#deleteBtn]: Cancelling JobID: ${jobId}`)
-      await agenda.client.cancel({ _id: new ObjectId(jobId) })
-
-      await interaction.message.edit(`JobID: ${jobId} cancelled.`)
-
-      // await interaction.editReply(`JobID: ${jobId} cancelled.`)
-
-      // await interaction.reply(`JobID: ${jobId} cancelled.`)
-    }
-
-    // console.log(JSON.stringify(interaction.message, null, 2))
-    // console.log(JSON.stringify(interaction.component, null, 2))
+    await interaction.editReply(`When: ${when}, What: ${message}`)
   }
 
   @Slash({
@@ -121,67 +129,51 @@ export class NewReminder {
   })
   @SlashGroup('reminders')
   async list(interaction: CommandInteraction): Promise<void> {
-    const jobs = (await agenda.client.jobs({
-      'data.userId': interaction.user.id,
-    })) as Job<ReminderJobData>[]
+    // await interaction.deferReply({ ephemeral: true })
 
+    const reminders = await agenda.getUserReminders(interaction.user.id)
     const pages: PaginationItem[] = []
 
-    for (let x = 0; x < jobs.length; x++) {
-      const job = jobs[x]
+    for (let x = 0; x < reminders.length; x++) {
       const embed = new EmbedBuilder()
-        .setTitle(`Reminder ${x + 1}`)
-        .setDescription(job.attrs.data.message)
-        .setFooter({ text: `Page ${x + 1} of ${jobs.length}` })
-        .addFields({ name: 'When', value: job.attrs.data.when, inline: true })
-        .addFields({ name: 'JobID', value: `${job.attrs._id?.toString()}`, inline: true })
+        .setTitle(`Reminders for **${interaction.user.username}**`)
+        .setDescription(
+          `**Message**: ${reminders[x].attrs.data.message}\n\n**When**: ${reminders[x].attrs.data.when}`
+        )
+        .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
+      // .addFields({ name: 'When', value: reminders[x].attrs.data.when, inline: true })
 
-      const components = [
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents([
-          new ButtonBuilder({
-            customId: 'deleteBtn',
-            label: 'Delete',
-            style: ButtonStyle.Danger,
-          }),
-        ]),
-      ]
-
-      pages.push({ embeds: [embed], components })
+      pages.push({ embeds: [embed] })
     }
-
-    // const pages: PaginationItem[] = jobs.map((job, i) => {
-    //   const embed = new EmbedBuilder()
-    //     .setFooter({ text: `Page ${i + 1} of ${jobs.length}` })
-    //     .setTitle(`Job ${job.attrs._id}`)
-    //     .addFields({ name: 'Message', value: job.attrs.data.message })
-    //     .addFields({ name: 'When', value: job.attrs.data.when })
-    //     .addFields({ name: 'ChannelID', value: job.attrs.data.channelId })
-    //     .addFields({ name: 'UserID', value: job.attrs.data.userId })
-    //     .addFields({ name: 'JobID', value: `${job.attrs._id?.toString()}` })
-    //     .setDescription(`Just a test description...`)
-
-    //   const components = [
-    //     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents([
-    //       new ButtonBuilder({
-    //         customId: 'deleteBtn',
-    //         label: 'Delete',
-    //         style: ButtonStyle.Danger,
-    //       }),
-    //     ]),
-    //   ]
-
-    //   return { embeds: [embed], components }
-    // })
 
     if (pages.length > 0) {
-      const pagination = new Pagination(interaction, pages)
-      const collection = await pagination.send()
-    } else {
-      await interaction.reply(`No reminders found.`)
+      const pagination = new Pagination(interaction, pages, {
+        filter: interact => interact.user.id === interaction.user.id,
+        type: PaginationType.Button,
+        ephemeral: true,
+      })
+      await pagination.send()
+    } else await interaction.reply(`No reminders found.`)
+  }
+
+  private async deleteAutocomplete(interaction: AutocompleteInteraction) {
+    const remindersData = await agenda.getUserReminders(interaction.user.id)
+    const remindersMap: ApplicationCommandOptionChoiceData<string | number>[] = []
+
+    for (let x = 0; x < remindersData.length; x++) {
+      if (remindersData[x].attrs._id) {
+        const value = `${remindersData[x].attrs._id?.toString()}`
+        const name =
+          `${remindersData[x].attrs.data.when} - ${remindersData[x].attrs.data.message}`.substring(
+            0,
+            100
+          )
+
+        remindersMap.push({ name, value })
+      }
     }
 
-    // await interaction.reply(`Count = ${jobs.length}`)
-    // interaction.reply(`When: ${when}, What: ${what}`)
+    interaction.respond(remindersMap)
   }
 
   @Slash({
@@ -191,21 +183,32 @@ export class NewReminder {
   @SlashGroup('reminders')
   async delete(
     @SlashOption({
-      description: 'The ID of the reminder to delete.',
-      name: 'id',
+      description: 'The reminder to delete/cancel.',
+      name: 'reminder',
       required: true,
       type: ApplicationCommandOptionType.String,
+      autocomplete: true,
     })
-    id: string,
+    reminder: string,
 
-    interaction: CommandInteraction
+    interaction: CommandInteraction | AutocompleteInteraction
   ): Promise<void> {
-    logger.info(`[NewReminder#delete]: ID: ${id}`)
+    if (interaction.isAutocomplete()) this.deleteAutocomplete(interaction)
+    else {
+      // await interaction.deferReply({ ephemeral: true })
 
-    const objectId = new ObjectId(id)
+      logger.info(`[NewReminder#delete]: Reminder ID: ${reminder}`)
 
-    await agenda.client.cancel({ _id: objectId })
+      const objectId = new ObjectId(reminder)
 
-    await interaction.reply(`ID: ${id}`)
+      const reminderJob = await agenda.getReminders({ _id: objectId }, undefined, 1)
+
+      await reminderJob[0].remove()
+
+      await interaction.reply({
+        content: `Successfully deleted reminder!\n\n**${reminderJob[0].attrs.data.message}**`,
+        ephemeral: true,
+      })
+    }
   }
 }
