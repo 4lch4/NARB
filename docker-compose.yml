@@ -4,5 +4,6 @@ services:
   app:
     build: .
     command: node dist/main.js
+    restart: always
     env_file:
       - .env
