@@ -47,6 +47,7 @@
     "dayjs": "^1.11.9",
     "discord.js": "^14.11.0",
     "discordx": "^11.7.6",
+    "human-interval": "^2.0.1",
     "koa": "^2.14.2",
     "nanoid": "^4.0.2",
     "saslprep": "^1.0.3"
