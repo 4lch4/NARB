@@ -48,6 +48,7 @@
     "discord.js": "^14.11.0",
     "discordx": "^11.7.6",
     "koa": "^2.14.2",
+    "nanoid": "^4.0.2",
     "saslprep": "^1.0.3"
   },
   "devDependencies": {
