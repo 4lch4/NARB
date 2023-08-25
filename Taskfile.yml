@@ -44,14 +44,14 @@ tasks:
     aliases:
       - s
     cmds:
-      - "[ -f .env ] && doppler secrets download --no-file --format docker -p {{ .DOPPLER_PROJECT }} -c {{ .DOPPLER_CONFIG }} > .env"
+      - doppler secrets download --no-file --format docker -p {{ .DOPPLER_PROJECT }} -c {{ .DOPPLER_CONFIG }} > docker.env
 
   start:
     desc: Starts the project.
     aliases:
       - st
     cmds:
-      - docker run -d --name narb --env-file=".env" 4lch4/narb:latest
+      - docker run -d --name narb --env-file="docker.env" 4lch4/narb:latest
 
   restart:
     aliases: [r]
