@@ -19,6 +19,7 @@
       "@commands/*": ["djs/commands/*"],
       "@agenda/*": ["agenda/*"],
       "@lib/*": ["lib/*"],
+      "@constants/*": ["lib/constants/*"],
     },
 
     "strict": true,
