@@ -1,7 +1,7 @@
-import { Agenda, Job } from '@hokify/agenda'
-import { Client } from 'discordx'
-import { ReminderJobData } from '@interfaces/index.js'
 import { logger } from '@4lch4/logger'
+import { Agenda, Job } from '@hokify/agenda'
+import { ReminderJobData } from '@interfaces/index.js'
+import { Client } from 'discordx'
 import { JobNames } from '../index.js'
 
 export class ReminderJob {

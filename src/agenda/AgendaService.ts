@@ -1,9 +1,6 @@
-import { Agenda, Job } from '@hokify/agenda'
-import { AgendaConfig, ReminderJobData } from '@interfaces/index.js'
-import { dirname, importx } from '@discordx/importer'
-import { Client } from 'discordx'
-import { ReminderJob } from './jobs/index.js'
 import { logger } from '@4lch4/logger'
+import { Agenda, Job } from '@hokify/agenda'
+import { ReminderJobData } from '@interfaces/index.js'
 import { Config } from '@lib/index.js'
 
 export class AgendaService {

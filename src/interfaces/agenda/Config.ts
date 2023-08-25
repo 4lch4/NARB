@@ -1,5 +1,5 @@
-import { Agenda, IDatabaseOptions, IDbConfig, IMongoOptions } from '@hokify/agenda'
 import { AgendaService } from '@agenda/index.js'
+import { Agenda, IDatabaseOptions, IDbConfig, IMongoOptions } from '@hokify/agenda'
 
 /**
  * A type that represents the configuration for the {@link AgendaService} and, by extension,

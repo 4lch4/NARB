@@ -1,16 +1,15 @@
+import { logger } from '@4lch4/logger'
 import { dirname, importx } from '@discordx/importer'
-import { Koa } from '@discordx/koa'
+import { Agenda } from '@hokify/agenda'
+import { Config } from '@lib/index.js'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
 import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
-import { Agenda } from '@hokify/agenda'
-import { logger } from '@4lch4/logger'
 import { AgendaService } from './agenda/index.js'
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc.js'
-import timezone from 'dayjs/plugin/timezone.js'
 import { BotTools } from './lib/AdminTools.js'
-import { Config } from '@lib/index.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)

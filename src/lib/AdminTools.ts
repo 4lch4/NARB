@@ -1,4 +1,3 @@
-import { AgendaService } from '@agenda/index.js'
 import { Client } from 'discordx'
 
 const HOMEPAGE_CHANNEL_ID = '1060314191749206068'
