@@ -15,35 +15,33 @@ export class AgendaService {
     return this.client.start()
   }
 
-  public async temp() {
-    this.client.on('complete', job => {
-      logger.debug(`[AgendaService#temp]: Within the complete event...`)
-    })
+  public async scheduleRecurringReminder(
+    jobName: string,
+    jobData: ReminderJobData
+  ): Promise<Job<ReminderJobData>> {
+    const JobDataDefaults: Partial<ReminderJobData> = {
+      mention: false,
+      reoccuring: true,
+    }
 
-    this.client.on('error', error => {
-      logger.debug(`[AgendaService#temp]: Within the error event...`)
-      logger.error(`[AgendaService#temp]: ${JSON.stringify(error, null, 2)}`)
+    return this.client.every(jobData.when, jobName, {
+      ...JobDataDefaults,
+      ...jobData,
     })
+  }
 
-    this.client.on('fail', (err, job) => {
-      logger.debug(`[AgendaService#temp]: Within the fail event...`)
-      logger.error(`[AgendaService#temp]: ${JSON.stringify(err, null, 2)}`)
-    })
+  public async scheduleReminder(
+    jobName: string,
+    jobData: ReminderJobData
+  ): Promise<Job<ReminderJobData>> {
+    const JobDataDefaults: Partial<ReminderJobData> = {
+      mention: false,
+      reoccuring: false,
+    }
 
-    this.client.on('processJob', job => {
-      logger.debug(`[AgendaService#temp]: Within the processJob event...`)
-    })
-
-    this.client.on('ready', () => {
-      logger.debug(`[AgendaService#temp]: Within the ready event...`)
-    })
-
-    this.client.on('start', job => {
-      logger.debug(`[AgendaService#temp]: Within the start event...`)
-    })
-
-    this.client.on('success', job => {
-      logger.debug(`[AgendaService#temp]: Within the success event...`)
+    return this.client.every(jobData.when, jobName, {
+      ...JobDataDefaults,
+      ...jobData,
     })
   }
 
