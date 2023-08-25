@@ -53,7 +53,7 @@ export class AgendaService {
     }
 
     if (JobData.recurring) {
-      await this.client.every(when, name, JobData, { skipImmediate: true, timezone })
+      await this.client.every(when, name, JobData, { skipImmediate: true })
     } else {
       await this.client.schedule(when, name, JobData)
     }
