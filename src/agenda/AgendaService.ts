@@ -1,7 +1,9 @@
 import { logger } from '@4lch4/logger'
 import { Agenda, Job } from '@hokify/agenda'
-import { ReminderJobData } from '@interfaces/index.js'
+import { ReminderInput, ReminderJobData } from '@interfaces/index.js'
 import { Config } from '@lib/index.js'
+import { CommandInteraction } from 'discord.js'
+import { Client } from 'discordx'
 
 export class AgendaService {
   public client: Agenda
@@ -15,34 +17,48 @@ export class AgendaService {
     return this.client.start()
   }
 
-  public async scheduleRecurringReminder(
-    jobName: string,
-    jobData: ReminderJobData
-  ): Promise<Job<ReminderJobData>> {
-    const JobDataDefaults: Partial<ReminderJobData> = {
-      mention: false,
-      reoccuring: true,
-    }
+  public async defineReminder(name: string, interaction: CommandInteraction) {
+    this.client.define(name, async (job: Job<ReminderJobData>) => {
+      let { channelId, message, userId, when, mention } = job.attrs.data
 
-    return this.client.every(jobData.when, jobName, {
-      ...JobDataDefaults,
-      ...jobData,
+      logger.debug(`[ReminderJob#define:run]: Within the ${job.attrs.name} job...`)
+      logger.debug(`[ReminderJob#define:run]: Channel ID: ${channelId}`)
+      logger.debug(`[ReminderJob#define:run]: Message: ${message}`)
+      logger.debug(`[ReminderJob#define:run]: User ID: ${userId}`)
+      logger.debug(`[ReminderJob#define:run]: When: ${when}`)
+
+      const channel = await interaction.client.channels.fetch(channelId)
+
+      if (channel?.isTextBased()) {
+        if (mention) message = `<@${userId}> ${message}`
+
+        return channel.send(message)
+      }
     })
   }
 
   public async scheduleReminder(
-    jobName: string,
-    jobData: ReminderJobData
-  ): Promise<Job<ReminderJobData>> {
-    const JobDataDefaults: Partial<ReminderJobData> = {
-      mention: false,
-      reoccuring: false,
+    name: string,
+    { channelId, message, userId, when, mention, recurring, timezone }: ReminderInput
+  ): Promise<void> {
+    const JobData: ReminderJobData = {
+      when,
+      userId,
+      message,
+      channelId,
+
+      recurring: recurring || false,
+      mention: mention || false,
+      timezone: timezone || 'America/Chicago',
     }
 
-    return this.client.every(jobData.when, jobName, {
-      ...JobDataDefaults,
-      ...jobData,
-    })
+    if (JobData.recurring) {
+      await this.client.every(when, name, JobData, { skipImmediate: true, timezone })
+    } else {
+      await this.client.schedule(when, name, JobData)
+    }
+
+    return this.client.start()
   }
 
   /**
