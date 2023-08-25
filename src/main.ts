@@ -22,14 +22,10 @@ export const bot = new Client({
     IntentsBitField.Flags.GuildMembers,
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.GuildMessageReactions,
-    IntentsBitField.Flags.MessageContent,
   ],
 
   // Debug logs are disabled in silent mode
   silent: false,
-
-  // Configuration for @SimpleCommand
-  simpleCommand: { prefix: '!' },
 })
 
 const adminTools = new BotTools(bot)
@@ -64,22 +60,6 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received.')
 
   process.exit(0)
-})
-
-process.on('uncaughtException', async (error: Error) => {
-  logger.error(`[process#uncaughtException]: ${JSON.stringify(error, null, 2)}`)
-
-  await adminTools.sendImportantMessage(
-    `Server has encountered an \`uncaughtException\`:\n\n\`\`\`${error}\`\`\``
-  )
-})
-
-process.on('unhandledRejection', async (reason: Error | any, promise: Promise<any>) => {
-  logger.error(`[process#unhandledRejection]: ${JSON.stringify(reason, null, 2)}`)
-
-  await adminTools.sendImportantMessage(
-    `Server has encountered an \`unhandledRejection\`:\n\n\`\`\`${reason}\`\`\``
-  )
 })
 
 bot.on('interactionCreate', (interaction: Interaction) => {
