@@ -89,17 +89,9 @@ export class Reminders extends BaseCommand {
       userId: interaction.user.id,
     }
 
-    const responses = await this.agenda
-      .defineReminder(jobName, interaction)
-      .scheduleReminder(jobName, jobData)
-      .start()
-      .runCalls()
-
-    const failures = responses.filter(res => res.status !== 'fulfilled')
-
-    if (failures.length > 0) {
-      logger.error(`[Reminders#schedule]: Failed Promises: ${JSON.stringify(failures, null, 2)}`)
-    }
+    this.agenda.defineReminder(jobName, interaction)
+    await this.agenda.scheduleReminder(jobName, jobData)
+    await this.agenda.start()
 
     await interaction.editReply(`Message scheduled for \`${when}\`.`)
   }
@@ -112,16 +104,19 @@ export class Reminders extends BaseCommand {
   async list(interaction: CommandInteraction): Promise<void> {
     const reminders = await this.agenda.getUserActiveReminders(interaction.user.id)
     const pages: PaginationItem[] = []
+    const embeds = []
 
     for (let x = 0; x < reminders.length; x++) {
       const embed = new EmbedBuilder()
-        .setTitle(`Reminders for **${interaction.user.username}**`)
-        .setDescription(
-          `**Message**: ${reminders[x].attrs.data.message}\n\n**When**: ${reminders[x].attrs.data.when}`
-        )
+        .setTitle(reminders[x].attrs.data.message)
+        .setDescription(reminders[x].attrs.data.when)
         .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
 
-      pages.push({ embeds: [embed] })
+      embeds.push(embed)
+    }
+
+    for (let x = 0; x < embeds.length / 3; x = x + 2) {
+      pages.push({ embeds: embeds.slice(x, x + 2) })
     }
 
     if (pages.length > 0) {
@@ -134,7 +129,7 @@ export class Reminders extends BaseCommand {
     } else await interaction.reply(`No reminders found.`)
   }
 
-  private async deleteAutocomplete(interaction: AutocompleteInteraction) {
+  private async remindersAutocomplete(interaction: AutocompleteInteraction) {
     const remindersData = await this.agenda.getUserActiveReminders(interaction.user.id)
     const remindersMap: ApplicationCommandOptionChoiceData<string | number>[] = []
 
@@ -171,18 +166,16 @@ export class Reminders extends BaseCommand {
 
     interaction: CommandInteraction | AutocompleteInteraction
   ): Promise<void> {
-    if (interaction.isAutocomplete()) this.deleteAutocomplete(interaction)
+    if (interaction.isAutocomplete()) this.remindersAutocomplete(interaction)
     else {
       logger.info(`[NewReminder#delete]: Reminder ID: ${reminder}`)
 
       const objectId = new ObjectId(reminder)
 
-      const reminderJob = await this.agenda.getReminders({ _id: objectId }, undefined, 1)
-
-      await reminderJob[0].remove()
+      const cancelRes = await this.agenda.client.cancel({ _id: objectId })
 
       await interaction.reply({
-        content: `Successfully deleted reminder!\n\n**${reminderJob[0].attrs.data.message}**`,
+        content: `Successfully deleted reminder!\n\n**${cancelRes}**`,
         ephemeral: true,
       })
     }
