@@ -14,14 +14,12 @@ export class AgendaService {
   }
 
   /** Starts the {@link Agenda} job processor(s). */
-  public start(): AgendaService {
-    this.calls.push(this.client.start())
-
-    return this
+  public start(): Promise<void> {
+    return this.client.start()
   }
 
-  public defineReminder(name: string, interaction: CommandInteraction): AgendaService {
-    this.client.define(name, async (job: Job<ReminderJobData>) => {
+  public defineReminder(name: string, interaction: CommandInteraction): void {
+    return this.client.define(name, async (job: Job<ReminderJobData>) => {
       let { channelId, message, userId, when, mention } = job.attrs.data
 
       logger.debug(`[ReminderJob#define:run]: Within the ${job.attrs.name} job...`)
@@ -38,14 +36,12 @@ export class AgendaService {
         return channel.send(message)
       }
     })
-
-    return this
   }
 
   public scheduleReminder(
     name: string,
     { channelId, message, userId, when, mention, recurring, timezone }: ReminderInput
-  ): AgendaService {
+  ): Promise<Job<ReminderJobData>> {
     const JobData: ReminderJobData = {
       when,
       userId,
@@ -57,16 +53,8 @@ export class AgendaService {
       timezone: timezone || 'America/Chicago',
     }
 
-    if (JobData.recurring) {
-      this.calls.push(this.client.every(when, name, JobData, { skipImmediate: true }))
-    } else this.calls.push(this.client.schedule(when, name, JobData))
-
-    return this
-  }
-
-  /** Execute any accumulated Promises, and any provided calls, and then return the results. */
-  public async runCalls(...calls: Promise<any>[]) {
-    return Promise.allSettled([...this.calls, ...calls])
+    if (JobData.recurring) return this.client.every(when, name, JobData, { skipImmediate: true })
+    else return this.client.schedule(when, name, JobData)
   }
 
   /**
