@@ -11,6 +11,7 @@
   "homepage": "https://github.com/4lch4/NARB",
   "scripts": {
     "start": "node dist/main.js",
+    "prestart": "npm run build",
     "build": "tsc && tsc-alias",
     "pretty": "prettier --write .",
     "lint": "prettier -c .",
