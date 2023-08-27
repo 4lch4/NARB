@@ -116,9 +116,8 @@ export class Reminders extends BaseCommand {
           .setTitle(reminders[x].attrs.data.message)
           .setDescription(
             DiscordTimestamps.getTimestamp(
-              // @ts-ignore
               reminders[x].attrs.nextRunAt,
-              TimestampFormat.RelativeTime
+              TimestampFormat.ShortDateTime
             )
           )
           .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
