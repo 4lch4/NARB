@@ -24,9 +24,14 @@ export enum TimestampFormat {
 
 /** This is a utility class for creating/managing Discord Timestamps. */
 export class DiscordTimestamps {
-  public static getTimestamp(date: string | Date, format: TimestampFormat | string) {
-    if (typeof date === 'string') date = new Date(date)
+  public static getTimestamp(
+    date?: string | Date | null,
+    format: TimestampFormat = TimestampFormat.RelativeTime
+  ) {
+    if (date) {
+      if (typeof date === 'string') date = new Date(date)
 
-    return `<t:${Math.floor(date.getTime() / 1000)}:${format}>`
+      return `<t:${Math.floor(date.getTime() / 1000)}:${format}>`
+    } else return null
   }
 }
