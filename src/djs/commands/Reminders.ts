@@ -1,9 +1,8 @@
-import { logger } from '@4lch4/logger'
 import { JobNames } from '@agenda/Constants.js'
 import { Pagination, PaginationItem, PaginationType } from '@discordx/pagination'
 import { ReminderJobData } from '@interfaces/index.js'
 import { DateTool } from '@lib/DateTool.js'
-import { BaseCommand } from '@lib/index.js'
+import { BaseCommand, DiscordTimestamps, TimestampFormat } from '@lib/index.js'
 import type {
   ApplicationCommandOptionChoiceData,
   AutocompleteInteraction,
@@ -77,7 +76,9 @@ export class Reminders extends BaseCommand {
   ): Promise<void> {
     await interaction.deferReply({ ephemeral: true })
 
-    const jobName = `${JobNames.BasicReminder}-${nanoid(10)}`
+    const jobName = recurring
+      ? `${JobNames.RecurringReminder}-${nanoid(10)}`
+      : `${JobNames.ScheduledReminder}-${nanoid(10)}`
 
     const jobData: ReminderJobData = {
       when,
@@ -90,10 +91,14 @@ export class Reminders extends BaseCommand {
     }
 
     this.agenda.defineReminder(jobName, interaction)
-    await this.agenda.scheduleReminder(jobName, jobData)
-    await this.agenda.start()
+    const createdJob = await this.agenda.scheduleReminder(jobName, jobData)
 
-    await interaction.editReply(`Message scheduled for \`${when}\`.`)
+    await interaction.editReply(
+      `Message scheduled for ${DiscordTimestamps.getTimestamp(
+        createdJob.attrs.nextRunAt || new Date(),
+        TimestampFormat.RelativeTime
+      )}.`
+    )
   }
 
   @Slash({
@@ -104,19 +109,22 @@ export class Reminders extends BaseCommand {
   async list(interaction: CommandInteraction): Promise<void> {
     const reminders = await this.agenda.getUserActiveReminders(interaction.user.id)
     const pages: PaginationItem[] = []
-    const embeds = []
 
     for (let x = 0; x < reminders.length; x++) {
-      const embed = new EmbedBuilder()
-        .setTitle(reminders[x].attrs.data.message)
-        .setDescription(reminders[x].attrs.data.when)
-        .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
+      if (reminders[x].attrs.nextRunAt) {
+        const embed = new EmbedBuilder()
+          .setTitle(reminders[x].attrs.data.message)
+          .setDescription(
+            DiscordTimestamps.getTimestamp(
+              // @ts-ignore
+              reminders[x].attrs.nextRunAt,
+              TimestampFormat.RelativeTime
+            )
+          )
+          .setFooter({ text: `Reminder ${x + 1} of ${reminders.length}` })
 
-      embeds.push(embed)
-    }
-
-    for (let x = 0; x < embeds.length / 3; x = x + 2) {
-      pages.push({ embeds: embeds.slice(x, x + 2) })
+        pages.push({ embeds: [embed] })
+      }
     }
 
     if (pages.length > 0) {
@@ -168,11 +176,11 @@ export class Reminders extends BaseCommand {
   ): Promise<void> {
     if (interaction.isAutocomplete()) this.remindersAutocomplete(interaction)
     else {
-      logger.info(`[NewReminder#delete]: Reminder ID: ${reminder}`)
+      this.logger.info(`[NewReminder#delete]: Reminder ID: ${reminder}`)
 
       const objectId = new ObjectId(reminder)
 
-      const cancelRes = await this.agenda.client.cancel({ _id: objectId })
+      const cancelRes = await this.agenda.cancel({ _id: objectId })
 
       await interaction.reply({
         content: `Successfully deleted reminder!\n\n**${cancelRes}**`,

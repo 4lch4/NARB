@@ -1,4 +1,3 @@
-import { logger } from '@4lch4/logger'
 import { dirname, importx } from '@discordx/importer'
 import { Agenda } from '@hokify/agenda'
 import { Config } from '@lib/index.js'
@@ -9,17 +8,14 @@ import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
 import { AgendaService } from './agenda/index.js'
-import { BotTools } from './lib/AdminTools.js'
+import { Messenger, logger } from './lib/index.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-const agenda = new Agenda(Config.getAgendaConfig())
-
 export const bot = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
-    IntentsBitField.Flags.GuildMembers,
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.GuildMessageReactions,
   ],
@@ -28,7 +24,7 @@ export const bot = new Client({
   silent: false,
 })
 
-const adminTools = new BotTools(bot)
+const messaging = new Messenger(bot)
 
 bot.once('ready', async () => {
   // Make sure all guilds are cached
@@ -39,14 +35,18 @@ bot.once('ready', async () => {
 
   const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
 
-  await adminTools.sendImportantMessage(`Server has come **ONLINE** @ \`${timestamp}\`...`)
+  await messaging.sendImportantMessage(`Server has come **ONLINE** @ \`${timestamp}\`...`)
 
-  logger.success(`NARB has come online @ ${timestamp}...`)
+  logger.info(`NARB has come online @ ${timestamp}...`)
 })
 
-bot.on('debug', (message: string) => logger.debug(`[ClientEvent:debug]: ${message}`))
+bot.on('debug', (message: string) => {
+  logger.debug(`[ClientEvent:debug]: ${message}`)
+})
 
-bot.on('warn', (message: string) => logger.warn(`[ClientEvent:warn]: ${message}`))
+bot.on('warn', (message: string) => {
+  logger.warn(`[ClientEvent:warn]: ${message}`)
+})
 
 bot.on('error', (error: Error) => {
   logger.error(`[ClientEvent:error]: ${JSON.stringify(error, null, 2)}`)
@@ -55,7 +55,7 @@ bot.on('error', (error: Error) => {
 process.on('SIGTERM', async () => {
   const timestamp = dayjs().tz('America/Chicago').format('YYYY-MM-DD HH:mm:ss')
 
-  await adminTools.sendImportantMessage(`Server is going **OFFLINE** @ \`${timestamp}\`...`)
+  await messaging.sendImportantMessage(`Server is going **OFFLINE** @ \`${timestamp}\`...`)
 
   logger.info('SIGTERM signal received.')
 
@@ -89,6 +89,9 @@ async function run() {
   const agendaService = new AgendaService()
 
   await agendaService.start()
+
+  await agendaService.initCleanupJob()
+  await agendaService.reloadReminders(bot)
 
   // ************* rest api section: start **********
 

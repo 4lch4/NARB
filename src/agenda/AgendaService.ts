@@ -1,32 +1,54 @@
-import { logger } from '@4lch4/logger'
-import { getActiveRemindersQuery } from '@constants/index.js'
-import { Agenda, Job } from '@hokify/agenda'
+import { Agenda, IJobParameters, Job } from '@hokify/agenda'
 import { ReminderInput, ReminderJobData } from '@interfaces/index.js'
-import { Config } from '@lib/index.js'
+import {
+  Config,
+  getAllActiveRemindersQuery,
+  getUserActiveRemindersQuery,
+  logger,
+} from '@lib/index.js'
 import { CommandInteraction } from 'discord.js'
+import { Client } from 'discordx'
+import { Filter } from 'mongodb'
 
 export class AgendaService {
-  public client: Agenda
-  private calls: Array<Promise<any>> = []
-
-  public constructor() {
-    this.client = new Agenda(Config.getAgendaConfig())
-  }
+  public client = new Agenda(Config.getAgendaConfig())
 
   /** Starts the {@link Agenda} job processor(s). */
   public start(): Promise<void> {
     return this.client.start()
   }
 
+  /**
+   * Reloads the previously saved {@link Agenda} jobs. Useful for when the bot is restarted and we
+   * need to reload the jobs from the database.
+   */
+  public async reloadReminders(bot: Client) {
+    const activeRemindersQuery = getAllActiveRemindersQuery()
+
+    logger.debug(
+      `[AgendaService#reloadReminders]: ${JSON.stringify(activeRemindersQuery, null, 2)}`
+    )
+
+    const reminders = await this.client.jobs(getAllActiveRemindersQuery())
+
+    for (const reminder of reminders) {
+      this.client.define(reminder.attrs.name, async job => {
+        let { channelId, message, userId, mention } = job.attrs.data
+
+        const channel = await bot.channels.fetch(channelId)
+
+        if (channel?.isTextBased()) {
+          if (mention) message = `<@${userId}> ${message}`
+
+          return channel.send(message)
+        }
+      })
+    }
+  }
+
   public defineReminder(name: string, interaction: CommandInteraction): void {
     return this.client.define(name, async (job: Job<ReminderJobData>) => {
-      let { channelId, message, userId, when, mention } = job.attrs.data
-
-      logger.debug(`[ReminderJob#define:run]: Within the ${job.attrs.name} job...`)
-      logger.debug(`[ReminderJob#define:run]: Channel ID: ${channelId}`)
-      logger.debug(`[ReminderJob#define:run]: Message: ${message}`)
-      logger.debug(`[ReminderJob#define:run]: User ID: ${userId}`)
-      logger.debug(`[ReminderJob#define:run]: When: ${when}`)
+      let { channelId, message, userId, mention } = job.attrs.data
 
       const channel = await interaction.client.channels.fetch(channelId)
 
@@ -55,6 +77,10 @@ export class AgendaService {
 
     if (JobData.recurring) return this.client.every(when, name, JobData, { skipImmediate: true })
     else return this.client.schedule(when, name, JobData)
+  }
+
+  public async cancel(input: Filter<IJobParameters<unknown>>) {
+    return this.client.cancel(input)
   }
 
   /**
@@ -104,8 +130,21 @@ export class AgendaService {
     return remindersData as Job<ReminderJobData>[]
   }
 
+  public initCleanupJob() {
+    this.client.define('stale-reminder-cleanup', async () => {
+      // return this.client.cancel({ type: 'normal', lastRunAt: { $exists: true } })
+      const jobs = await this.client.jobs({ type: 'normal', lastRunAt: { $exists: true } })
+
+      for (const job of jobs) {
+        await job.remove()
+      }
+    })
+
+    return this.client.every('1 hour', 'stale-reminder-cleanup')
+  }
+
   public async getUserActiveReminders(userId: string): Promise<Job<ReminderJobData>[]> {
-    const reminders = await this.client.jobs(getActiveRemindersQuery(userId))
+    const reminders = await this.client.jobs(getUserActiveRemindersQuery(userId))
 
     return reminders as Job<ReminderJobData>[]
   }

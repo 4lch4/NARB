@@ -1,6 +1,5 @@
 import humanInterval from 'human-interval'
 
-
 enum Unit {
   Seconds = 'seconds',
   Minutes = 'minutes',

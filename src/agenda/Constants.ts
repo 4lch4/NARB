@@ -1,3 +1,4 @@
 export enum JobNames {
-  BasicReminder = 'basic-reminder',
+  RecurringReminder = 'recurring-reminder',
+  ScheduledReminder = 'scheduled-message',
 }

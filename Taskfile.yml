@@ -3,31 +3,26 @@ version: 3
 env:
   DOPPLER_PROJECT: narb
   DOPPLER_CONFIG: nonprod
+  DOCKER_IMAGE: 4lch4/narb:latest
+  DOCKER_CONTAINER: narb-test
 
 tasks:
   pretty:
     desc: Uses the Prettier CLI tool to format the codebase.
-    aliases:
-      - p
-      - format
-      - fmt
-    cmds:
-      - prettier --write .
+    aliases: [p, fmt]
+    cmd: prettier --write .
 
   build:
     desc: Builds the project by transpiling the codebase into JavaScript.
-    aliases:
-      - bd
-    cmds:
-      - docker build -t 4lch4/narb:latest .
+    aliases: [bd]
+    cmd: docker build -t {{ .DOCKER_IMAGE }} .
 
   clean:
     desc: Deletes the build output directory any installed dependencies and any generated files.
-    aliases:
-      - c
+    aliases: [c]
     cmds:
-      - docker stop narb
-      - docker rm narb
+      - docker stop {{ .DOCKER_CONTAINER }}
+      - docker rm {{ .DOCKER_CONTAINER }}
 
   push:
     desc: Push any git changes and tags to the remote repository.
@@ -51,7 +46,7 @@ tasks:
     aliases:
       - st
     cmds:
-      - docker run -d --name narb --env-file="docker.env" 4lch4/narb:latest
+      - docker run -d --name {{ .DOCKER_CONTAINER }} --env-file="docker.env" {{ .DOCKER_IMAGE }}
 
   restart:
     aliases: [r]
