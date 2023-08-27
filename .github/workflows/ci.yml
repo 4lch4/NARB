@@ -11,6 +11,7 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: 4lch4/narb
+  IMAGE_TAG: ${{ github.ref == 'refs/heads/main' && 'latest' || github.ref == 'refs/heads/develop' && 'dev' || github.ref == 'refs/tags/v*' && github.ref }}
 
 jobs:
   build:
@@ -42,8 +43,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          # Set the tag to latest if on main branch and dev if on the develop branch.
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref == 'refs/heads/main' && 'latest' || github.ref == 'refs/heads/develop' && 'dev' || github.ref == 'refs/tags/v*' && github.ref }}
+          tags: ${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
