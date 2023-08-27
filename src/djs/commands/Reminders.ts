@@ -1,4 +1,4 @@
-import { JobNames } from '@agenda/Constants.js'
+import { JobNames } from '@constants/index.js'
 import { Pagination, PaginationItem, PaginationType } from '@discordx/pagination'
 import { ReminderJobData } from '@interfaces/index.js'
 import { DateTool } from '@lib/DateTool.js'
